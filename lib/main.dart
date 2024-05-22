@@ -1,4 +1,4 @@
-import 'package:ds873/pages/inicial_page.dart';
+import 'package:ds873/pages/listaviagens_page.dart';
 import 'package:flutter/material.dart';
 import 'package:ds873/pages/cadastrogastos_page.dart';
 
