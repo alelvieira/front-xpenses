@@ -2,38 +2,31 @@ import 'package:html/parser.dart';
 import 'package:http/http.dart' as http;
 
 class Scraper {
-  static Future<CupomFiscalData> scrapeData(String url) async {
-    final response =
-        await http.get(Uri.parse(url)); //Conexão com o link gerado pelo QR Code
+  static Future<CupomFiscalData> scrap(String url) async {
+    final response = await http.get(Uri.parse(url));
 
     if (response.statusCode == 200) {
-      final document =
-          parse(response.body); //Retorna o corpo da página dentro desta final
+      final document = parse(response.body);
 
-      //Seletores retirados conforme tags presentes na inspeção de elementos da página;
-      final nomeLoja =
-          document.querySelector('#u20')!.text.trim(); //Nome da loja
+      //Captura das informações da NF
+      final nomeLoja = document.querySelector('#u20')!.text.trim(); //Loja
 
       final produtos = document.querySelectorAll('tbody> tr').map((produto) {
-        final nome = produto
-            .querySelector('span.txtTit2')! //Nome do produto
-            .text
-            .trim();
-        final quantidade = produto
-            .querySelector('span.Rqtd')! //Quantidade
-            .text
-            .trim();
-        final preco = produto
-            .querySelector('span.RvlUnit')! //Valor unitário
-            .text
-            .trim();
+        final nome =
+            produto.querySelector('span.txtTit2')!.text.trim(); //Produto
+
+        final qtd = produto.querySelector('span.Rqtd')!.text;
+        final quantidade = extrairValorDecimal(qtd); //Quantidade
+
+        final val = produto.querySelector('span.RvlUnit')!.text;
+        final preco = extrairValorDecimal(val); //Preço unitário
+
         return Produto(nome: nome, quantidade: quantidade, preco: preco);
       }).toList();
-
       final total = document
-          .querySelector('#linhaTotal > span.totalNumb.txtMax')! //Total da NF
+          .querySelector('#linhaTotal > span.totalNumb.txtMax')!
           .text
-          .trim();
+          .trim(); //Total NF
 
       return CupomFiscalData(
           nomeLoja: nomeLoja, produtos: produtos, total: total);
@@ -43,18 +36,16 @@ class Scraper {
   }
 }
 
+//Classe dos produtos
 class Produto {
   final String nome;
   final String quantidade;
   final String preco;
 
-  Produto({
-    required this.nome,
-    required this.quantidade,
-    required this.preco,
-  });
-} //Classe para armazenar as informações dos produtos;
+  Produto({required this.nome, required this.quantidade, required this.preco});
+}
 
+//Classe da Nota Fiscal (loja + produtos + total)
 class CupomFiscalData {
   final String nomeLoja;
   final List<Produto> produtos;
@@ -65,4 +56,14 @@ class CupomFiscalData {
     required this.produtos,
     required this.total,
   });
-} //Classe para armazenar todas as informações da NF;
+}
+
+//Função que visa eliminar caracteres de texto e manter apenas numéricos
+String extrairValorDecimal(String text) {
+  final parts = text.split(':');
+  if (parts.length > 1) {
+    return parts[1].trim();
+  } else {
+    return "";
+  }
+}
